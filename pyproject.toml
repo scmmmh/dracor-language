@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "language-detection"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Mark Hall", email = "mark.hall@work.room3b.eu" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = ["lingua-language-detector", "lxml"]
+
+[project.urls]
+Documentation = "https://github.com/Mark Hall/language-detection#readme"
+Issues = "https://github.com/Mark Hall/language-detection/issues"
+Source = "https://github.com/Mark Hall/language-detection"
+
+[tool.hatch.version]
+path = "language_detection/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:language_detection tests}"
+
+[tool.coverage.run]
+source_pkgs = ["language_detection", "tests"]
+branch = true
+parallel = true
+omit = [
+  "language_detection/__about__.py",
+]
+
+[tool.coverage.paths]
+language_detection = ["language_detection", "*/language-detection/language_detection"]
+tests = ["tests", "*/language-detection/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
