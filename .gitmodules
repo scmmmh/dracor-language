@@ -1,0 +1,9 @@
+[submodule "gerdracor"]
+	path = gerdracor
+	url = https://github.com/dracor-org/gerdracor.git
+[submodule "engdracor"]
+	path = engdracor
+	url = https://github.com/dracor-org/engdracor.git
+[submodule "fredracor"]
+	path = fredracor
+	url = https://github.com/dracor-org/fredracor.git
