@@ -24,12 +24,15 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["lingua-language-detector", "lxml"]
+dependencies = ["lingua-language-detector", "lxml", "typer"]
 
 [project.urls]
 Documentation = "https://github.com/Mark Hall/language-detection#readme"
 Issues = "https://github.com/Mark Hall/language-detection/issues"
 Source = "https://github.com/Mark Hall/language-detection"
+
+[project.scripts]
+dracor-lang = "language_detection.cli:app"
 
 [tool.hatch.version]
 path = "language_detection/__about__.py"
