@@ -44,12 +44,16 @@ def generate_basic_statistics(corpus: str, filename: str):
         f"Correctly identified snippets: {correct_snippet_count} ({correct_snippet_count / total_snippet_count})"
     )
     print(f"Total number of works: {len(works)}")
+    print(f"Total number of works [complete corpus]: {total_works_count}")
     print(
         f"Correctly identified works: {works_completely_correct} ({works_completely_correct / len(works)})"
+    )
+    print(
+        f"Correctly identified works: {works_completely_correct} ({works_completely_correct / total_works_count})"
     )
     print(
         f"Partially correctly identified works: {works_completely_correct + works_partially_correct} {(works_completely_correct + works_partially_correct) / len(works)}"
     )
     print(
-        f"Partially correctly identified works [total corpus]: {works_completely_correct + works_partially_correct} {(works_completely_correct + works_partially_correct) / total_works_count}"
+        f"Partially correctly identified works [complete corpus]: {works_completely_correct + works_partially_correct} {(works_completely_correct + works_partially_correct) / total_works_count}"
     )
