@@ -1,9 +1,14 @@
+from typing import Literal
+
 from typer import Typer
 
 from language_detection.analysis import generate_basic_statistics
 from language_detection.classification import merge_manual_classifications
 from language_detection.detector import extract_foreign_language_snippets
-from language_detection.processing import extract_above_threshold
+from language_detection.processing import (
+    extract_above_threshold,
+    extract_random_temporal_sample,
+)
 
 app = Typer(help="Language detection in Dracor corpora")
 
@@ -32,6 +37,16 @@ def extract_threshold_subset(
     if corpus not in ("engdracor", "fredracor", "gerdracor"):
         return
     extract_above_threshold(corpus, lower_threshold, upper_threshold)
+
+
+@app.command()
+def extract_random_sample(
+    corpus: str, size: int, filter: None | Literal["not-multilingual"] = None
+):
+    """Extract all foreign language snippets within given thresholds."""
+    if corpus not in ("engdracor", "fredracor", "gerdracor"):
+        return
+    extract_random_temporal_sample(corpus, size, filter)
 
 
 @app.command()
