@@ -6,7 +6,7 @@ from lxml import etree
 NAMESPACES = {"tei": "http://www.tei-c.org/ns/1.0"}
 
 
-def cache_decorator(cache_filename: str):
+def json_file_cache(cache_filename: str):
     def decorator(func):
         def wrapper(corpus: str, *args, **kwargs):
             if os.path.exists(os.path.join("results", corpus, cache_filename)):
@@ -22,7 +22,7 @@ def cache_decorator(cache_filename: str):
     return decorator
 
 
-@cache_decorator("_filenames_list.json")
+@json_file_cache("_filenames_list.json")
 def get_filenames(corpus: str) -> list[str]:
     filenames = []
     for work_filename in os.listdir(os.path.join(corpus, "tei")):
@@ -31,7 +31,7 @@ def get_filenames(corpus: str) -> list[str]:
     return filenames
 
 
-@cache_decorator("_filename_year_mapping.json")
+@json_file_cache("_filename_year_mapping.json")
 def get_filename_year_mapping(corpus: str) -> dict[str, int]:
     """Get the filename - year distribution"""
     file_year_map = {}
