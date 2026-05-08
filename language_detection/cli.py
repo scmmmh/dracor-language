@@ -2,7 +2,11 @@ from typing import Literal
 
 from typer import Typer
 
-from language_detection.analysis import generate_basic_statistics
+from language_detection.analysis import (
+    generate_basic_statistics,
+    generate_snippet_accuracy_data,
+    generate_temporal_distribution,
+)
 from language_detection.classification import merge_manual_classifications
 from language_detection.detector import extract_foreign_language_snippets
 from language_detection.processing import (
@@ -55,3 +59,5 @@ def calculate_statistics(corpus: str, filename: str):
     if corpus not in ("engdracor", "fredracor", "gerdracor"):
         return
     generate_basic_statistics(corpus, filename)
+    generate_snippet_accuracy_data(corpus, filename)
+    generate_temporal_distribution(corpus, filename)
