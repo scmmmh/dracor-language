@@ -24,7 +24,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["lingua-language-detector", "lxml", "pandas", "scipy", "seaborn", "typer"]
+dependencies = ["lingua-language-detector", "kdepy", "lxml", "pandas", "scipy", "seaborn", "typer"]
 
 [project.urls]
 Documentation = "https://github.com/Mark Hall/language-detection#readme"

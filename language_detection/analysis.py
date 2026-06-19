@@ -4,10 +4,20 @@ import os
 from csv import DictReader
 
 import matplotlib.pyplot as plt
-from pandas import DataFrame
+import numpy
+from KDEpy import FFTKDE
+from pandas import DataFrame, Series
 import seaborn
 
 from language_detection.util import get_filename_year_mapping, get_filenames
+
+
+def kdeplot(data: Series, label: str):
+    """Generate a KDE plot."""
+    np_data = data.to_numpy().copy()
+    np_data.sort()
+    kde = FFTKDE(kernel="gaussian", bw="ISJ").fit(np_data).evaluate()
+    plt.plot(kde[0], kde[1], label=label)
 
 
 def generate_basic_statistics(corpus: str, filename: str):
@@ -64,8 +74,57 @@ def generate_basic_statistics(corpus: str, filename: str):
         f"Partially correctly identified works [complete corpus]: {works_completely_correct + works_partially_correct} {(works_completely_correct + works_partially_correct) / total_works_count}"
     )
 
+    # Generate snippet length numbers
+    print("----------------------")
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    filename_year_mapping = get_filename_year_mapping(corpus)
+    data_points = []
+    for work_filename, year in filename_year_mapping.items():
+        max_snippet_length = 0
+        for row in data:
+            if row["file"] == work_filename and row["is_multilingual"] == "yes":
+                max_snippet_length = max(
+                    max_snippet_length, len(row["line"].split(" "))
+                )
+        data_points.append({"year": year, "max_snippet_length": max_snippet_length})
+    df = DataFrame(data_points)
+    for threshold in range(1, 11):
+        works_count = df.max_snippet_length[df.max_snippet_length >= threshold].count()
+        print(
+            f"Min {threshold} words: {works_count} ({works_count / total_works_count:.2})"
+        )
+
+    # Generate snippet count numbers
+    print("----------------------")
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    filename_year_mapping = get_filename_year_mapping(corpus)
+    data_points = []
+    for work_filename, year in filename_year_mapping.items():
+        multilingual_lines = []
+        for row in data:
+            if (
+                row["file"] == work_filename
+                and row["is_multilingual"] == "yes"
+                and row["line"] not in multilingual_lines
+            ):
+                multilingual_lines.append(row["line"])
+        data_points.append(
+            {"year": year, "multilingual_lines": len(multilingual_lines)}
+        )
+    df = DataFrame(data_points)
+    for threshold in range(1, 11):
+        works_count = df.multilingual_lines[df.multilingual_lines >= threshold].count()
+        print(
+            f"Min {threshold} lines: {works_count} ({works_count / total_works_count:.2})"
+        )
+
 
 def generate_snippet_accuracy_data(corpus: str, filename: str):
+    print("----------------------")
     with open(os.path.join("results", corpus, filename)) as in_f:
         reader = DictReader(in_f)
         data = list(reader)
@@ -93,6 +152,7 @@ def generate_snippet_accuracy_data(corpus: str, filename: str):
 
 
 def generate_temporal_distribution(corpus: str, filename: str):
+    # Generate graph for distribution of multilingual texts over time
     with open(os.path.join("results", corpus, filename)) as in_f:
         reader = DictReader(in_f)
         data = list(reader)
@@ -106,10 +166,168 @@ def generate_temporal_distribution(corpus: str, filename: str):
                 break
         data_points.append({"year": year, "is_multilingual": is_multilingual})
     df = DataFrame(data_points)
-    seaborn.kdeplot(data=df, x="year", label="All works")
-    seaborn.kdeplot(data=df[df.is_multilingual], x="year", label="Multilingual works")
+
+    kdeplot(df.year, "All works")
+    kdeplot(df.year[df.is_multilingual], "Multilingual works")
     plt.title("Distribution of works over time")
     plt.xlabel("Year")
     plt.legend()
     plt.savefig(os.path.join("analysis", corpus, "distribution-works-time.png"))
+    plt.close()
+
+    # Generate graphs for distribution of multilingual texts over time, for different snippet lengths
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    filename_year_mapping = get_filename_year_mapping(corpus)
+    data_points = []
+    for work_filename, year in filename_year_mapping.items():
+        max_snippet_length = 0
+        for row in data:
+            if row["file"] == work_filename and row["is_multilingual"] == "yes":
+                max_snippet_length = max(
+                    max_snippet_length, len(row["line"].split(" "))
+                )
+        data_points.append({"year": year, "max_snippet_length": max_snippet_length})
+    df = DataFrame(data_points)
+    kdeplot(df.year, label="All works")
+    for threshold in range(1, 11):
+        kdeplot(
+            df.year[df.max_snippet_length >= threshold],
+            label=f"Multilingual (min {threshold})",
+        )
+    plt.title("Distribution of works over time")
+    plt.xlabel("Year")
+    plt.legend()
+    plt.savefig(
+        os.path.join(
+            "analysis",
+            corpus,
+            "distribution-works-time-min-words.png",
+        )
+    )
+    plt.close()
+
+    # Generate graphs for distribution of multilingual texts over time, for different snippet counts
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    filename_year_mapping = get_filename_year_mapping(corpus)
+    data_points = []
+    for work_filename, year in filename_year_mapping.items():
+        multilingual_lines = []
+        for row in data:
+            if (
+                row["file"] == work_filename
+                and row["is_multilingual"] == "yes"
+                and row["line"] not in multilingual_lines
+            ):
+                multilingual_lines.append(row["line"])
+        data_points.append(
+            {"year": year, "multilingual_lines": len(multilingual_lines)}
+        )
+    df = DataFrame(data_points)
+    kdeplot(df.year, label="All works")
+    for threshold in range(1, 11):
+        kdeplot(
+            df.year[df.multilingual_lines >= threshold],
+            label=f"Multilingual (min {threshold})",
+        )
+    plt.title("Distribution of works over time")
+    plt.xlabel("Year")
+    plt.legend()
+    plt.savefig(
+        os.path.join("analysis", corpus, "distribution-works-time-min-lines.png")
+    )
+    plt.close()
+
+    # Generate distribution of multilingual works relative to confidence threshold
+    data_points = []
+    for threshold in range(100, 70, -1):
+        multilingual = 0
+        for work_filename, year in filename_year_mapping.items():
+            is_multilingual = False
+            for row in data:
+                if (
+                    row["file"] == work_filename
+                    and row["is_multilingual"] == "yes"
+                    and float(row["confidence"]) >= (threshold / 100)
+                ):
+                    is_multilingual = True
+                    break
+            if is_multilingual:
+                multilingual = multilingual + 1
+        data_points.append({"threshold": threshold, "count": multilingual})
+    df = DataFrame(data_points)
+    df.plot(x="threshold", y="count", label="Multilingual texts")
+    plt.savefig(os.path.join("analysis", corpus, "work-threshold-count.png"))
+    plt.close()
+
+    # Generate distribution of incorrect multilingual works relative to confidence threshold
+    data_points = []
+    for threshold in range(100, 70, -1):
+        multilingual = 0
+        for work_filename, year in filename_year_mapping.items():
+            is_multilingual = False
+            is_false_multilingual = False
+            for row in data:
+                if (
+                    row["file"] == work_filename
+                    and row["is_multilingual"] == "yes"
+                    and float(row["confidence"]) >= (threshold / 100)
+                ):
+                    is_multilingual = True
+                if (
+                    row["file"] == work_filename
+                    and row["is_multilingual"] == "no"
+                    and float(row["confidence"]) >= (threshold / 100)
+                ):
+                    is_false_multilingual = True
+            if not is_multilingual and is_false_multilingual:
+                multilingual = multilingual + 1
+        data_points.append({"threshold": threshold, "count": multilingual})
+    df = DataFrame(data_points)
+    df.plot(x="threshold", y="count", label="Incorrect Multilingual texts")
+    plt.savefig(os.path.join("analysis", corpus, "work-threshold-error-count.png"))
+    plt.close()
+
+    # Generate graph for distribution of language use over time
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    filename_year_mapping = get_filename_year_mapping(corpus)
+    data_points = []
+    for work_filename, year in filename_year_mapping.items():
+        work = {
+            "year": year,
+            "has_english": False,
+            "has_french": False,
+            "has_italian": False,
+            "has_latin": False,
+            "has_spanish": False,
+        }
+        for row in data:
+            if row["file"] == work_filename and row["is_multilingual"] == "yes":
+                if row["language"] == "Language.ENGLISH":
+                    work["has_english"] = True
+                elif row["language"] == "Language.FRENCH":
+                    work["has_french"] = True
+                elif row["language"] == "Language.ITALIAN":
+                    work["has_italian"] = True
+                elif row["language"] == "Language.LATIN":
+                    work["has_latin"] = True
+                elif row["language"] == "Language.SPANISH":
+                    work["has_spanish"] = True
+        data_points.append(work)
+    df = DataFrame(data_points)
+    kdeplot(df.year, label="All works")
+    kdeplot(df.year[df.has_english], label="English use")
+    kdeplot(df.year[df.has_french], label="French use")
+    kdeplot(df.year[df.has_italian], label="Italian use")
+    kdeplot(df.year[df.has_latin], label="Latin use")
+    kdeplot(df.year[df.has_spanish], label="Spanish use")
+    plt.title("Distribution of works over time")
+    plt.xlabel("Year")
+    plt.legend()
+    plt.savefig(os.path.join("analysis", corpus, "distribution-languages-time.png"))
     plt.close()
