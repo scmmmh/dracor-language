@@ -3,12 +3,15 @@
 import os
 from collections import Counter
 from csv import DictReader
+import json
+from time import sleep
 
 import matplotlib.pyplot as plt
 from KDEpy import FFTKDE
 from lxml import etree
 from pandas import DataFrame, Series
 from scipy.stats import chi2_contingency
+import httpx2
 import seaborn
 
 from language_detection.detector import text_for_node
@@ -429,3 +432,72 @@ def generate_multilingual_line_stats(corpus: str, filename: str):
     plt.close()
     counts = Counter([item[1] for item in counts])
     print(f"Number of multilingual lines per work: {counts}")
+
+
+def generate_gender_distribution(corpus: str, filename: str):
+    """Generate gender distribution stats."""
+    genders_dict = {}
+    if os.path.isfile(os.path.join("results", corpus, "_authors_genders.json")):
+        with open(os.path.join("results", corpus, "_authors_genders.json")) as in_f:
+            genders_dict = json.load(in_f)
+    with httpx2.Client(
+        headers={
+            "User-Agent": "DramaCorpusMultilingualBot/1.0 (mark.hall@open.ac.uk) httpx2/2.5"
+        }
+    ) as client:
+        for tei_filename in os.listdir(os.path.join(corpus, "tei")):
+            if tei_filename.endswith(".xml"):
+                with open(os.path.join(corpus, "tei", tei_filename)) as in_f:
+                    doc = etree.parse(in_f)
+                    author_id = doc.xpath(
+                        "//tei:titleStmt//tei:author/tei:idno[@type='wikidata']/text()",
+                        namespaces=NAMESPACES,
+                    )
+                    if len(author_id) > 0:
+                        if author_id[0] in genders_dict:
+                            continue
+                        response = client.get(
+                            f"https://www.wikidata.org/wiki/Special:EntityData/{author_id[0]}.json"
+                        )
+                        data = response.json()
+                        if "P21" in data["entities"][author_id[0]]["claims"]:
+                            if (
+                                data["entities"][author_id[0]]["claims"]["P21"][0][
+                                    "mainsnak"
+                                ]["datavalue"]["value"]["id"]
+                                == "Q6581097"
+                            ):
+                                genders_dict[author_id[0]] = "male"
+                            else:
+                                genders_dict[author_id[0]] = "female"
+                        sleep(0.5)
+    with open(os.path.join("results", corpus, "_authors_genders.json"), "w") as in_f:
+        json.dump(genders_dict, in_f)
+    corpus_counts = Counter(genders_dict.values()).most_common()
+    print(f"Gender distribution in the corpus: {corpus_counts}")
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    male = 0
+    female = 0
+    seen_authors = []
+    for line in data:
+        with open(os.path.join(corpus, "tei", line["file"])) as in_f:
+            doc = etree.parse(in_f)
+            author_id = doc.xpath(
+                "//tei:titleStmt//tei:author/tei:idno[@type='wikidata']/text()",
+                namespaces=NAMESPACES,
+            )
+            if len(author_id) > 0 and author_id[0] in genders_dict:
+                if author_id[0] in seen_authors:
+                    continue
+                seen_authors.append(author_id[0])
+                if genders_dict[author_id[0]] == "male":
+                    male = male + 1
+                else:
+                    female = female + 1
+    print(
+        f"Gender distribution in the multilingual copus: {female} female, {male} male"
+    )
+    chi2 = chi2_contingency([[value[1] for value in corpus_counts], [male, female]])
+    print(f"Chi2 comparison: {chi2.pvalue}")

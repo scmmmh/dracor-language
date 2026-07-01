@@ -54,12 +54,13 @@ def calculate_statistics(corpus: str, filename: str):
     """Calculate the statistics for the file in the corpus."""
     if corpus not in ("engdracor", "fredracor", "gerdracor"):
         return
-    analysis.generate_basic_statistics(corpus, filename)
-    analysis.generate_snippet_accuracy_data(corpus, filename)
-    analysis.generate_temporal_distribution(corpus, filename)
-    analysis.generate_multilingual_speaker_distribution(corpus, filename)
-    analysis.generate_work_type_distribution(corpus, filename)
-    analysis.generate_multilingual_line_stats(corpus, filename)
+    # analysis.generate_basic_statistics(corpus, filename)
+    # analysis.generate_snippet_accuracy_data(corpus, filename)
+    # analysis.generate_temporal_distribution(corpus, filename)
+    # analysis.generate_multilingual_speaker_distribution(corpus, filename)
+    # analysis.generate_work_type_distribution(corpus, filename)
+    # analysis.generate_multilingual_line_stats(corpus, filename)
+    analysis.generate_gender_distribution(corpus, filename)
 
 
 @app.command()
