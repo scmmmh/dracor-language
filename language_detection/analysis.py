@@ -1,12 +1,18 @@
 """Analysis functionality."""
 
 import os
+from collections import Counter
 from csv import DictReader
 
 import matplotlib.pyplot as plt
 from KDEpy import FFTKDE
+from lxml import etree
 from pandas import DataFrame, Series
+from scipy.stats import chi2_contingency
+import seaborn
 
+from language_detection.detector import text_for_node
+from language_detection.processing import get_speaker, lines_for_tree, NAMESPACES
 from language_detection.util import get_filename_year_mapping
 
 
@@ -328,4 +334,79 @@ def generate_temporal_distribution(corpus: str, filename: str):
     plt.xlabel("Year")
     plt.legend()
     plt.savefig(os.path.join("analysis", corpus, "distribution-languages-time.png"))
+    plt.close()
+
+
+def generate_multilingual_speaker_distribution(corpus: str, filename: str):
+    """Generate a distribution of the number of unique speakers per work."""
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    speakers = {}
+    for row in data:
+        if not row["is_multilingual"]:
+            continue
+        with open(os.path.join(corpus, "tei", row["file"])) as in_f:
+            doc = etree.parse(in_f)
+        all_lines = list(lines_for_tree(doc.getroot()))
+        for line in all_lines:
+            if text_for_node(line) == row["line"]:
+                speaker = get_speaker(line)
+                if speaker is not None:
+                    if row["file"] not in speakers:
+                        speakers[row["file"]] = set()
+                    speakers[row["file"]].add(text_for_node(speaker))
+    counts = Counter([len(values) for values in speakers.values()])
+    seaborn.barplot(
+        x=[item[0] for item in counts.most_common()],
+        y=[item[1] for item in counts.most_common()],
+    )
+    plt.title("Distribution of number of multilingual speakers")
+    plt.xlabel("Number of unique multilingual speakers")
+    plt.xlabel("Number of multilingual texts")
+    plt.savefig(
+        os.path.join("analysis", corpus, "distribution-multilingual-speakers.png")
+    )
+    plt.close()
+    print(f"Number of speaker counts: {counts.most_common()}")
+
+
+def generate_work_type_distribution(corpus: str, filename: str):
+    """Generate a distribution of the number of multilingual works per work category."""
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    multilingual_works = set()
+    for row in data:
+        if not row["is_multilingual"]:
+            continue
+        multilingual_works.add(row["file"])
+    data = []
+    for filename in os.listdir(os.path.join(corpus, "tei")):
+        if filename.endswith(".xml"):
+            with open(os.path.join(corpus, "tei", filename)) as in_f:
+                doc = etree.parse(in_f)
+                genre = doc.xpath(
+                    "//tei:term[@type='genreTitle']/text()", namespaces=NAMESPACES
+                )
+                if len(genre) > 0:
+                    data.append({"genre": genre[0], "kind": "All"})
+                else:
+                    data.append({"genre": "Unspecified", "kind": "All"})
+    for filename in multilingual_works:
+        with open(os.path.join(corpus, "tei", filename)) as in_f:
+            doc = etree.parse(in_f)
+            genre = doc.xpath(
+                "//tei:term[@type='genreTitle']/text()", namespaces=NAMESPACES
+            )
+            if len(genre) > 0:
+                data.append({"genre": genre[0], "kind": "Multilingual"})
+            else:
+                data.append({"genre": "Unspecified", "kind": "Multilingual"})
+    df = DataFrame(data)
+    seaborn.catplot(data=df, x="genre", hue="kind", kind="count")
+    plt.title("Distribution per genre")
+    plt.xlabel("Genre")
+    plt.ylabel("Number of works")
+    plt.savefig(os.path.join("analysis", corpus, "distribution-works-genre.png"))
     plt.close()

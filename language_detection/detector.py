@@ -21,6 +21,8 @@ detector = LanguageDetectorBuilder.from_languages(
 
 def text_for_node(node):
     """Extract the text for a XML node."""
+    if node is None:
+        return ""
     if node.tag in ("{http://www.tei-c.org/ns/1.0}stage",):
         return ""
     buffer = []

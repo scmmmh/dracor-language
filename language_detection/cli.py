@@ -2,11 +2,7 @@ from typing import Literal
 
 from typer import Typer
 
-from language_detection.analysis import (
-    generate_basic_statistics,
-    generate_snippet_accuracy_data,
-    generate_temporal_distribution,
-)
+from language_detection import analysis, processing
 from language_detection.classification import merge_manual_classifications
 from language_detection.detector import extract_foreign_language_snippets
 from language_detection.processing import (
@@ -58,6 +54,16 @@ def calculate_statistics(corpus: str, filename: str):
     """Calculate the statistics for the file in the corpus."""
     if corpus not in ("engdracor", "fredracor", "gerdracor"):
         return
-    generate_basic_statistics(corpus, filename)
-    generate_snippet_accuracy_data(corpus, filename)
-    generate_temporal_distribution(corpus, filename)
+    # analysis.generate_basic_statistics(corpus, filename)
+    # analysis.generate_snippet_accuracy_data(corpus, filename)
+    # analysis.generate_temporal_distribution(corpus, filename)
+    # analysis.generate_multilingual_speaker_distribution(corpus, filename)
+    analysis.generate_work_type_distribution(corpus, filename)
+
+
+@app.command()
+def extract_multilingual_snippets(corpus: str, filename: str, min_words: int = 0):
+    """Extract multilingual snippets from texts"""
+    if corpus not in ("engdracor", "fredracor", "gerdracor"):
+        return
+    processing.extract_multilingual_snippets(corpus, filename, min_words)

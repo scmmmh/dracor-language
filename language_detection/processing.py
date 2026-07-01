@@ -8,6 +8,8 @@ from typing import Literal
 from lxml import etree
 from scipy.stats import chi2_contingency
 
+from language_detection.detector import text_for_node
+
 NAMESPACES = {"tei": "http://www.tei-c.org/ns/1.0"}
 
 
@@ -122,3 +124,70 @@ def extract_random_temporal_sample(
         writer.writeheader()
         for work_filename in selected_corpus:
             writer.writerow({"file": work_filename, "is_multilingual": ""})
+
+
+def lines_for_tree(node):
+    """Extract all the lines to be processed.
+
+    These are either l or p tags."""
+    if node.tag in ("{http://www.tei-c.org/ns/1.0}l", "{http://www.tei-c.org/ns/1.0}p"):
+        text = text_for_node(node)
+        if text.strip():
+            yield node
+    else:
+        for child in node:
+            for line in lines_for_tree(child):
+                yield line
+
+
+def get_speaker(line):
+    speaker = line.xpath("../tei:speaker", namespaces=NAMESPACES)
+    if len(speaker) > 0:
+        return speaker[0]
+    else:
+        speaker = line.xpath("../../tei:speaker", namespaces=NAMESPACES)
+        if len(speaker) > 0:
+            return speaker[0]
+    return None
+
+
+def extract_multilingual_snippets(corpus: str, filename: str, min_words: int):
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    snippets = []
+    for row in data:
+        if not row["is_multilingual"]:
+            continue
+        if len(row["line"].split(" ")) < min_words:
+            continue
+        with open(os.path.join(corpus, "tei", row["file"])) as in_f:
+            doc = etree.parse(in_f)
+        all_lines = list(lines_for_tree(doc.getroot()))
+        for line in all_lines:
+            if text_for_node(line) == row["line"]:
+                line_idx = all_lines.index(line)
+                snippet = [
+                    f"{text_for_node(get_speaker(all_lines[idx]))}: {text_for_node(all_lines[idx])}"
+                    for idx in range(
+                        max((0, line_idx - 3)), min((line_idx + 4, len(all_lines)))
+                    )
+                ]
+                snippets.append(
+                    {
+                        "language": row["language"],
+                        "confidence": row["confidence"],
+                        "line": row["line"],
+                        "file": row["file"],
+                        "snippet": "\n".join(snippet),
+                    }
+                )
+    with open(
+        os.path.join("results", corpus, f"multilingual-snippets-{min_words}.csv"), "w"
+    ) as out_f:
+        writer = DictWriter(
+            out_f, fieldnames=["language", "confidence", "line", "file", "snippet"]
+        )
+        writer.writeheader()
+        for row in snippets:
+            writer.writerow(row)
