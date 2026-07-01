@@ -410,3 +410,22 @@ def generate_work_type_distribution(corpus: str, filename: str):
     plt.ylabel("Number of works")
     plt.savefig(os.path.join("analysis", corpus, "distribution-works-genre.png"))
     plt.close()
+
+
+def generate_multilingual_line_stats(corpus: str, filename: str):
+    """Generate stats on the number of multilingual lines per work."""
+    with open(os.path.join("results", corpus, filename)) as in_f:
+        reader = DictReader(in_f)
+        data = list(reader)
+    works = []
+    for line in data:
+        works.append(line["file"])
+    counts = Counter(works).most_common()
+    seaborn.catplot(x=[item[1] for item in counts], kind="count")
+    plt.title("Distribution per genre")
+    plt.xlabel("Number of snippets")
+    plt.ylabel("Number of works")
+    plt.savefig(os.path.join("analysis", corpus, "distribution-works-snippets.png"))
+    plt.close()
+    counts = Counter([item[1] for item in counts])
+    print(f"Number of multilingual lines per work: {counts}")
