@@ -4,12 +4,10 @@ import os
 from csv import DictReader
 
 import matplotlib.pyplot as plt
-import numpy
 from KDEpy import FFTKDE
 from pandas import DataFrame, Series
-import seaborn
 
-from language_detection.util import get_filename_year_mapping, get_filenames
+from language_detection.util import get_filename_year_mapping
 
 
 def kdeplot(data: Series, label: str):
