@@ -157,7 +157,7 @@ def extract_multilingual_snippets(corpus: str, filename: str, min_words: int):
         data = list(reader)
     snippets = []
     for row in data:
-        if not row["is_multilingual"]:
+        if row["is_multilingual"] != "yes":
             continue
         if len(row["line"].split(" ")) < min_words:
             continue

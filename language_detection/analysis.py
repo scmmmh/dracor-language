@@ -347,7 +347,7 @@ def generate_multilingual_speaker_distribution(corpus: str, filename: str):
         data = list(reader)
     speakers = {}
     for row in data:
-        if not row["is_multilingual"]:
+        if row["is_multilingual"] != "yes":
             continue
         with open(os.path.join(corpus, "tei", row["file"])) as in_f:
             doc = etree.parse(in_f)
@@ -381,7 +381,7 @@ def generate_work_type_distribution(corpus: str, filename: str):
         data = list(reader)
     multilingual_works = set()
     for row in data:
-        if not row["is_multilingual"]:
+        if row["is_multilingual"] != "yes":
             continue
         multilingual_works.add(row["file"])
     data = []
