@@ -141,7 +141,7 @@ def generate_snippet_accuracy_data(corpus: str, filename: str):
         correct = [row for row in filtered if row["is_multilingual"] == "yes"]
         data_points.append(
             {
-                "threshold": threshold / 100,
+                "threshold": threshold,
                 "correct": len(correct) / len(filtered),
                 "identified": len(correct),
             }
@@ -150,7 +150,9 @@ def generate_snippet_accuracy_data(corpus: str, filename: str):
         if len(filtered) == len(data):
             break
     df = DataFrame(data_points)
-    df.plot(x="threshold", y="correct", label="Fraction correct")
+    df.plot(x="threshold", y="correct", label="Korrekt identifizierte Snippets")
+    plt.xlabel("Grenzwert")
+    plt.ylabel("Bruchteil korrekt identifizierter Snippets")
     plt.savefig(os.path.join("analysis", corpus, "snippet-threshold-accuracy.png"))
     plt.close()
     df.plot(x="threshold", y="identified", label="Number of snippets identified")
@@ -174,10 +176,10 @@ def generate_temporal_distribution(corpus: str, filename: str):
         data_points.append({"year": year, "is_multilingual": is_multilingual})
     df = DataFrame(data_points)
 
-    kdeplot(df.year, "All works")
-    kdeplot(df.year[df.is_multilingual], "Multilingual works")
-    plt.title("Distribution of works over time")
-    plt.xlabel("Year")
+    kdeplot(df.year, "Alle Werke")
+    kdeplot(df.year[df.is_multilingual], "Multilingualle Werke")
+    # plt.title("Häufigkeitsverteilung der Werke über die Zeit")
+    plt.xlabel("Jahr")
     plt.legend()
     plt.savefig(os.path.join("analysis", corpus, "distribution-works-time.png"))
     plt.close()
@@ -197,14 +199,42 @@ def generate_temporal_distribution(corpus: str, filename: str):
                 )
         data_points.append({"year": year, "max_snippet_length": max_snippet_length})
     df = DataFrame(data_points)
-    kdeplot(df.year, label="All works")
-    for threshold in range(1, 11):
-        kdeplot(
-            df.year[df.max_snippet_length >= threshold],
-            label=f"Multilingual (min {threshold})",
-        )
-    plt.title("Distribution of works over time")
-    plt.xlabel("Year")
+    # kdeplot(df.year, label="All works")
+    for min_threshold, max_threshold in ((1, 5), (6, 10), (11, None)):
+        if max_threshold is not None:
+            kdeplot(
+                df.year[
+                    (df.max_snippet_length >= min_threshold)
+                    & (df.max_snippet_length <= max_threshold)
+                ],
+                label=f"{min_threshold} - {max_threshold} Wörter",
+            )
+            print(
+                f"""Number of Works with between {min_threshold} and {
+                    max_threshold
+                } Words per Snippet: {
+                    len(
+                        df.year[
+                            (df.max_snippet_length >= min_threshold)
+                            & (df.max_snippet_length <= max_threshold)
+                        ],
+                    )
+                }"""
+            )
+        else:
+            kdeplot(
+                df.year[df.max_snippet_length >= min_threshold],
+                label=f"Mehr als {min_threshold} Wörter",
+            )
+            print(
+                f"""Number of Works with at least {min_threshold} Words per Snippet: {
+                    len(
+                        df.year[(df.max_snippet_length >= min_threshold)],
+                    )
+                }"""
+            )
+    plt.title("Verteilung der Werke mit verschiedenen Snippetlängen")
+    plt.xlabel("Jahr")
     plt.legend()
     plt.savefig(
         os.path.join(
@@ -327,14 +357,19 @@ def generate_temporal_distribution(corpus: str, filename: str):
                     work["has_spanish"] = True
         data_points.append(work)
     df = DataFrame(data_points)
-    kdeplot(df.year, label="All works")
-    kdeplot(df.year[df.has_english], label="English use")
-    kdeplot(df.year[df.has_french], label="French use")
-    kdeplot(df.year[df.has_italian], label="Italian use")
-    kdeplot(df.year[df.has_latin], label="Latin use")
-    kdeplot(df.year[df.has_spanish], label="Spanish use")
-    plt.title("Distribution of works over time")
-    plt.xlabel("Year")
+    # kdeplot(df.year, label="All works")
+    kdeplot(df.year[df.has_english], label="Englisch")
+    print(f"Total number of English works: {len(df.year[df.has_english])}")
+    kdeplot(df.year[df.has_french], label="Französisch")
+    print(f"Total number of French works: {len(df.year[df.has_french])}")
+    kdeplot(df.year[df.has_italian], label="Italienisch")
+    print(f"Total number of Italian works: {len(df.year[df.has_italian])}")
+    kdeplot(df.year[df.has_latin], label="Latein")
+    print(f"Total number of Latin works: {len(df.year[df.has_latin])}")
+    kdeplot(df.year[df.has_spanish], label="Spanisch")
+    print(f"Total number of Spanish works: {len(df.year[df.has_spanish])}")
+    # plt.title("Häufigkeitsverteilung der Sprachen über die Zeit")
+    plt.xlabel("Jahr")
     plt.legend()
     plt.savefig(os.path.join("analysis", corpus, "distribution-languages-time.png"))
     plt.close()
@@ -364,9 +399,9 @@ def generate_multilingual_speaker_distribution(corpus: str, filename: str):
         x=[item[0] for item in counts.most_common()],
         y=[item[1] for item in counts.most_common()],
     )
-    plt.title("Distribution of number of multilingual speakers")
-    plt.xlabel("Number of unique multilingual speakers")
-    plt.xlabel("Number of multilingual texts")
+    # plt.title("Distribution of number of multilingual speakers")
+    plt.xlabel("Anzahl an multilingualen Figuren")
+    plt.ylabel("Anzahl an Werken")
     plt.savefig(
         os.path.join("analysis", corpus, "distribution-multilingual-speakers.png")
     )
@@ -386,16 +421,16 @@ def generate_work_type_distribution(corpus: str, filename: str):
         multilingual_works.add(row["file"])
     data = []
     for filename in os.listdir(os.path.join(corpus, "tei")):
-        if filename.endswith(".xml"):
+        if filename.endswith(".xml") and filename not in multilingual_works:
             with open(os.path.join(corpus, "tei", filename)) as in_f:
                 doc = etree.parse(in_f)
                 genre = doc.xpath(
                     "//tei:term[@type='genreTitle']/text()", namespaces=NAMESPACES
                 )
                 if len(genre) > 0:
-                    data.append({"genre": genre[0], "kind": "All"})
+                    data.append({"genre": genre[0], "kind": "Monolingual"})
                 else:
-                    data.append({"genre": "Unspecified", "kind": "All"})
+                    data.append({"genre": "Unspecified", "kind": "Monolingual"})
     for filename in multilingual_works:
         with open(os.path.join(corpus, "tei", filename)) as in_f:
             doc = etree.parse(in_f)
@@ -413,6 +448,10 @@ def generate_work_type_distribution(corpus: str, filename: str):
     plt.ylabel("Number of works")
     plt.savefig(os.path.join("analysis", corpus, "distribution-works-genre.png"))
     plt.close()
+    print(f"Distribution of genre over all works: {Counter(df['genre']).most_common()}")
+    print(
+        f"Distribution of genre over multilingual works: {Counter(df[df['kind'] == 'Multilingual']['genre']).most_common()}"
+    )
 
 
 def generate_multilingual_line_stats(corpus: str, filename: str):
@@ -422,15 +461,17 @@ def generate_multilingual_line_stats(corpus: str, filename: str):
         data = list(reader)
     works = []
     for line in data:
-        works.append(line["file"])
+        if line["is_multilingual"] == "yes":
+            works.append(line["file"])
     counts = Counter(works).most_common()
     seaborn.catplot(x=[item[1] for item in counts], kind="count")
-    plt.title("Distribution per genre")
-    plt.xlabel("Number of snippets")
-    plt.ylabel("Number of works")
+    # plt.title("Distribution per genre")
+    plt.xlabel("Anzahl an Snippets im Werk")
+    plt.ylabel("Anzahl an Werken")
     plt.savefig(os.path.join("analysis", corpus, "distribution-works-snippets.png"))
     plt.close()
-    counts = Counter([item[1] for item in counts])
+    counts = Counter([item[1] for item in counts]).most_common()
+    counts.sort(key=lambda item: item[0])
     print(f"Number of multilingual lines per work: {counts}")
 
 
@@ -445,6 +486,7 @@ def generate_gender_distribution(corpus: str, filename: str):
             "User-Agent": "DramaCorpusMultilingualBot/1.0 (mark.hall@open.ac.uk) httpx2/2.5"
         }
     ) as client:
+        no_wikidata_gender = 0
         for tei_filename in os.listdir(os.path.join(corpus, "tei")):
             if tei_filename.endswith(".xml"):
                 with open(os.path.join(corpus, "tei", tei_filename)) as in_f:
@@ -470,9 +512,12 @@ def generate_gender_distribution(corpus: str, filename: str):
                                 genders_dict[author_id[0]] = "male"
                             else:
                                 genders_dict[author_id[0]] = "female"
+                        else:
+                            no_wikidata_gender = no_wikidata_gender + 1
                         sleep(0.5)
     with open(os.path.join("results", corpus, "_authors_genders.json"), "w") as in_f:
         json.dump(genders_dict, in_f)
+    print(f"No Wikidata gender: {no_wikidata_gender}")
     corpus_counts = Counter(genders_dict.values()).most_common()
     print(f"Gender distribution in the corpus: {corpus_counts}")
     with open(os.path.join("results", corpus, filename)) as in_f:
@@ -481,6 +526,7 @@ def generate_gender_distribution(corpus: str, filename: str):
     male = 0
     female = 0
     seen_authors = []
+    no_wikidata_gender_multilingual = 0
     for line in data:
         with open(os.path.join(corpus, "tei", line["file"])) as in_f:
             doc = etree.parse(in_f)
@@ -496,8 +542,20 @@ def generate_gender_distribution(corpus: str, filename: str):
                     male = male + 1
                 else:
                     female = female + 1
+            else:
+                if author_id[0] in seen_authors:
+                    continue
+                no_wikidata_gender_multilingual = no_wikidata_gender_multilingual + 1
+                seen_authors.append(author_id[0])
     print(
-        f"Gender distribution in the multilingual copus: {female} female, {male} male"
+        f"Gender distribution in the multilingual copus: {female} female, {male} male, {no_wikidata_gender} no-gender"
     )
+    chi2 = chi2_contingency(
+        [
+            [value[1] for value in corpus_counts] + [no_wikidata_gender],
+            [male, female, no_wikidata_gender_multilingual],
+        ]
+    )
+    print(f"Chi2 comparison: {chi2.pvalue}")
     chi2 = chi2_contingency([[value[1] for value in corpus_counts], [male, female]])
     print(f"Chi2 comparison: {chi2.pvalue}")
