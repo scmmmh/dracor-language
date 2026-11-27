@@ -519,12 +519,14 @@ def generate_gender_distribution(corpus: str, filename: str):
         json.dump(genders_dict, in_f)
     print(f"No Wikidata gender: {no_wikidata_gender}")
     corpus_counts = Counter(genders_dict.values()).most_common()
-    print(f"Gender distribution in the corpus: {corpus_counts}")
+    print(
+        f"Gender distribution in the corpus: {corpus_counts}, {no_wikidata_gender} unknown"
+    )
     with open(os.path.join("results", corpus, filename)) as in_f:
         reader = DictReader(in_f)
         data = list(reader)
-    male = 0
-    female = 0
+    multi_male = 0
+    multi_female = 0
     seen_authors = []
     no_wikidata_gender_multilingual = 0
     for line in data:
@@ -539,23 +541,38 @@ def generate_gender_distribution(corpus: str, filename: str):
                     continue
                 seen_authors.append(author_id[0])
                 if genders_dict[author_id[0]] == "male":
-                    male = male + 1
+                    multi_male = multi_male + 1
                 else:
-                    female = female + 1
+                    multi_female = multi_female + 1
             else:
                 if author_id[0] in seen_authors:
                     continue
                 no_wikidata_gender_multilingual = no_wikidata_gender_multilingual + 1
                 seen_authors.append(author_id[0])
     print(
-        f"Gender distribution in the multilingual copus: {female} female, {male} male, {no_wikidata_gender} no-gender"
+        f"Gender distribution in the multilingual copus: {multi_female} female, {multi_male} male, {no_wikidata_gender_multilingual} unknown"
     )
+    mono_male = 0
+    mono_female = 0
+    for key, value in genders_dict.items():
+        if key not in seen_authors:
+            if value == "male":
+                mono_male = mono_male + 1
+            else:
+                mono_female = mono_female + 1
+    print(
+        f"Gender distribution in the monolingual copus: {mono_female} female, {mono_male} male, {no_wikidata_gender - no_wikidata_gender_multilingual} unknown"
+    )
+    chi2 = chi2_contingency([[mono_male, mono_female], [multi_male, multi_female]])
+    print(f"Chi2 comparison (female/male): {chi2.pvalue}")
     chi2 = chi2_contingency(
         [
-            [value[1] for value in corpus_counts] + [no_wikidata_gender],
-            [male, female, no_wikidata_gender_multilingual],
+            [
+                mono_male,
+                mono_female,
+                no_wikidata_gender - no_wikidata_gender_multilingual,
+            ],
+            [multi_male, multi_female, no_wikidata_gender_multilingual],
         ]
     )
-    print(f"Chi2 comparison: {chi2.pvalue}")
-    chi2 = chi2_contingency([[value[1] for value in corpus_counts], [male, female]])
-    print(f"Chi2 comparison: {chi2.pvalue}")
+    print(f"Chi2 comparison (female/male/unknown): {chi2.pvalue}")
