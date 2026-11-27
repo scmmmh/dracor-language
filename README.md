@@ -1,21 +1,5 @@
-# language-detection
-
-[![PyPI - Version](https://img.shields.io/pypi/v/language-detection.svg)](https://pypi.org/project/language-detection)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/language-detection.svg)](https://pypi.org/project/language-detection)
-
------
-
-## Table of Contents
-
-- [Installation](#installation)
-- [License](#license)
-
-## Installation
-
-```console
-pip install language-detection
-```
+# DraCor Language
 
 ## License
 
-`language-detection` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
+Code provided within the `dracor-language` project is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license. All DraCor data is licensed as documented by the DraCor project.
